@@ -6,49 +6,61 @@ on:
 name: Docker images
 
 jobs:
-  build-images:
-    name: Build & push Docker images
-    runs-on: ubuntu-22.04
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    services:
+      registry:
+        image: registry:latest
+        ports:
+          - 5000:5000
 
     strategy:
       matrix:
         runtime:
-
-          - name: freedesktop-21.08
-            packages: org.freedesktop.Platform//21.08 org.freedesktop.Sdk//21.08
+          - name: freedesktop
+            tag: 21.08
+            packages: org.freedesktop.Platform/x86_64/21.08 org.freedesktop.Sdk/x86_64/21.08 org.freedesktop.Platform/aarch64/21.08 org.freedesktop.Sdk/aarch64/21.08
             remote: flathub
 
-          - name: freedesktop-22.08
-            packages: org.freedesktop.Platform//22.08 org.freedesktop.Sdk//22.08
+          - name: freedesktop
+            tag: 22.08
+            packages: org.freedesktop.Platform/x86_64/22.08 org.freedesktop.Sdk/x86_64/22.08 org.freedesktop.Platform/aarch64/22.08 org.freedesktop.Sdk/aarch64/22.08
             remote: flathub
 
-          - name: gnome-40
-            packages: org.gnome.Platform//40 org.gnome.Sdk//40
+          - name: gnome
+            tag: 42
+            packages: org.gnome.Platform/x86_64/42 org.gnome.Sdk/x86_64/42 org.gnome.Platform/aarch64/42 org.gnome.Sdk/aarch64/42
             remote: flathub
 
-          - name: gnome-41
-            packages: org.gnome.Platform//41 org.gnome.Sdk//41
+          - name: gnome
+            tag: 43
+            packages: org.gnome.Platform/x86_64/43 org.gnome.Sdk/x86_64/43 org.gnome.Platform/aarch64/43 org.gnome.Sdk/aarch64/43
             remote: flathub
 
-          - name: gnome-42
-            packages: org.gnome.Platform//42 org.gnome.Sdk//42
+          - name: gnome
+            tag: master
+            packages: org.gnome.Platform/x86_64/master org.gnome.Sdk/x86_64/master org.gnome.Platform/aarch64/master org.gnome.Sdk/aarch64/master
+            remote: gnome-nightly
+
+          - name: kde
+            tag: 5.15-21.08
+            packages: org.kde.Platform/x86_64/5.15-21.08 org.kde.Sdk/x86_64/5.15-21.08 io.qt.qtwebengine.BaseApp/x86_64/5.15-21.08 org.kde.Platform/aarch64/5.15-21.08 org.kde.Sdk/aarch64/5.15-21.08 io.qt.qtwebengine.BaseApp/aarch64/5.15-21.08 
             remote: flathub
 
-          - name: gnome-43
-            packages: org.gnome.Platform//43 org.gnome.Sdk//43
+          - name: kde
+            tag: 5.15-22.08
+            packages: org.kde.Platform/x86_64/5.15-22.08 org.kde.Sdk/x86_64/5.15-22.08 io.qt.qtwebengine.BaseApp/x86_64/5.15-22.08 org.kde.Platform/aarch64/5.15-22.08 org.kde.Sdk/aarch64/5.15-22.08 io.qt.qtwebengine.BaseApp/aarch64/5.15-22.08 
             remote: flathub
 
-          - name: kde-5.15
-            packages: org.kde.Platform//5.15 org.kde.Sdk//5.15 io.qt.qtwebengine.BaseApp//5.15
+          - name: elementary
+            tag: juno-20.08
+            packages: io.elementary.BaseApp//juno-20.08 org.gnome.Platform//3.38 org.gnome.Sdk//3.38
             remote: flathub
-
-          - name: kde-5.15-21.08
-            packages: org.kde.Platform//5.15-21.08 org.kde.Sdk//5.15-21.08 io.qt.qtwebengine.BaseApp//5.15-21.08
-            remote: flathub
-
-          - name: kde-5.15-22.08
-            packages: org.kde.Platform//5.15-22.08 org.kde.Sdk//5.15-22.08 io.qt.qtwebengine.BaseApp//5.15-22.08
-            remote: flathub
+      fail-fast: false
 
     services:
       registry:
@@ -58,48 +70,53 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3.2.0
+        uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2.2.1
+      - name: Login
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
         with:
           driver-opts: network=host
 
-      - name: Cache Docker layers for the base image
-        uses: actions/cache@v3.2.0
+      - name: Setup Cache
+        uses: actions/cache@v3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      - name: Build & push the Fedora base image to local registry
-        uses: docker/build-push-action@v3.2.0
+            
+      - name: Build Base Image
+        uses: docker/build-push-action@v4
         with:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache
-          context: .
           file: Dockerfile
           pull: true
           push: true
-          tags: localhost:5000/fedora-base:latest
+          tags: localhost:5000/flatter-base:latest
 
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2.1.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Write the Dockerfile for the ${{ matrix.runtime.name }} runtime
+      - name: Generate Dockerfile
         run: |
           cat >> ${{ matrix.runtime.name }}.Dockerfile << EOF
           # syntax = docker/dockerfile:experimental
-          FROM localhost:5000/fedora-base:latest
-          RUN --security=insecure flatpak install -y --noninteractive ${{matrix.runtime.remote}} ${{ matrix.runtime.packages }}
-      - name: Build & push the ${{ matrix.runtime.name }} image to Docker Hub
-        uses: docker/build-push-action@v3.2.0
+          FROM localhost:5000/flatter-base:latest
+          RUN --security=insecure flatpak install -y --noninteractive \
+                                                  ${{ matrix.runtime.remote }} \
+                                                  ${{ matrix.runtime.packages }}
+          EOF
+      - name: Build
+        uses: docker/build-push-action@v4
         with:
           allow: security.insecure
           context: .
           file: ${{ matrix.runtime.name }}.Dockerfile
-          push: true
-          tags: asganarei/flatpak_asga:${{ matrix.runtime.name }}
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ghcr.io/asganarei/flatpak_asga:${{ matrix.runtime.name }}:${{ matrix.runtime.tag }}
