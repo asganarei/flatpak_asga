@@ -62,12 +62,6 @@ jobs:
             remote: flathub
       fail-fast: false
 
-    services:
-      registry:
-        image: registry:latest
-        ports:
-          - 5000:5000
-
     steps:
       - name: Checkout
         uses: actions/checkout@v3
