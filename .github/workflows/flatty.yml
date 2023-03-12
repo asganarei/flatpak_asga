@@ -11,7 +11,7 @@ jobs:
     name: Flatty
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/andyholmes/flatter/kde:5.15-22.08
+      image: ghcr.io/asganarei/flatpak_asga/kde:5.15-22.08
       options: --privileged
 
     steps:
