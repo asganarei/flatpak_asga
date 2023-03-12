@@ -1,9 +1,9 @@
+name: Docker images
+
 on:
   schedule:
     - cron: "0 0 * * *" # This should run every hour
   workflow_dispatch:
-
-name: Docker images
 
 jobs:
   build:
