@@ -1,0 +1,53 @@
+app-id: it.dudat.booktab
+runtime: org.kde.Platform
+runtime-version: '5.15-22.08'
+sdk: org.kde.Sdk
+base: io.qt.qtwebengine.BaseApp
+base-version: '5.15-22.08'
+separate-locales: false
+command: booktab
+build-options:
+  no-debuginfo: true
+tags:
+  - proprietary
+finish-args:
+  - --device=dri
+  - --env=QTWEBENGINEPROCESS_PATH=/app/bin/QtWebEngineProcess
+  - --env=LD_LIBRARY_PATH=/app/extra/duDat/BooktabZ
+  - --env=QT_QPA_PLATFORM=xcb
+  - --share=ipc
+  - --share=network
+  - --socket=pulseaudio
+  - --socket=wayland
+  - --socket=x11
+  - --socket=cups
+  - --filesystem=xdg-run/pipewire-0
+  - --filesystem=xdg-documents
+  - --filesystem=xdg-download
+  - --filesystem=xdg-music
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-pictures
+cleanup-commands:
+  - /app/cleanup-BaseApp.sh
+modules:
+  - name: BooktabZ
+    buildsystem: simple
+    build-commands:
+      - install -Dm 755 booktab.sh /app/bin/booktab
+      - install -Dm 755 apply_extra.sh /app/bin/apply_extra
+      - install -Dm 755 /{usr,app}/bin/ar
+      - install -Dm 644 -t /app/share/applications it.dudat.booktab.desktop
+      - cp /usr/lib/$(gcc --print-multiarch)/libbfd-*.so /app/lib
+    sources:
+    sources:
+      - type: extra-data
+        url: https://booktab.it/setup-z/latest/BooktabSetup.deb
+        sha256: bae7b0a5446fb89907708cf1459552fb3f96d499fc8773967ae0ab6a9f3221eb
+        filename: BooktabSetup.deb
+        size: 97226224
+      - type: file
+        path: apply_extra.sh
+      - type: file
+        path: booktab.sh
+      - type: file
+        path: it.dudat.booktab.desktop

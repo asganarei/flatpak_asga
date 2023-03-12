@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=BooktabZ
+Comment=BooktabZ book reader
+Keywords=educational;
+Exec=booktab
+Icon=it.dudat.booktab
+Type=Application
+StartupNotify=true
