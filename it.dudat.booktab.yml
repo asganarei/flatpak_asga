@@ -39,7 +39,6 @@ modules:
       - install -Dm 644 -t /app/share/applications it.dudat.booktab.desktop
       - cp /usr/lib/$(gcc --print-multiarch)/libbfd-*.so /app/lib
     sources:
-    sources:
       - type: extra-data
         url: https://booktab.it/setup-z/latest/BooktabSetup.deb
         sha256: bae7b0a5446fb89907708cf1459552fb3f96d499fc8773967ae0ab6a9f3221eb
